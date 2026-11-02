@@ -45,3 +45,22 @@
 .poster-element.vector-icon svg{width:100%;height:100%;display:block;overflow:visible;}
 .poster.show-guides .poster-element.vector-icon.movable-asset{pointer-events:auto;cursor:move;touch-action:none;}
 .poster.show-guides .poster-element.vector-icon.movable-asset:hover{outline:2px dashed #00add2;outline-offset:2px;}
+
+/* v11 — edit controls, independent decorative line and linkage toggle */
+.link-toggle{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;color:#49515b;font-size:12px;white-space:nowrap;margin-right:7px}
+.link-toggle input{accent-color:#384b63;width:16px;height:16px;cursor:pointer}
+#undo-canvas:disabled{opacity:.35;cursor:not-allowed}
+.poster-element.movable-line{cursor:move;z-index:4;touch-action:none}
+.line-selection-overlay{pointer-events:none;z-index:11;border:1px dashed #00a9cf;background:rgba(0,180,218,.07)}
+.line-grip{pointer-events:auto;position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;background:white;border:2px solid #00a9cf;cursor:nwse-resize;touch-action:none}
+@media(max-width:900px){.header-tools{flex-wrap:wrap;justify-content:flex-end}.link-toggle{font-size:11px}}
+
+/* v12 — preview toolbar controls and compact editable HEX swatch */
+.preview-actions{gap:12px;flex-wrap:nowrap;}
+.preview-actions .link-toggle{margin-right:0;user-select:none;}
+.preview-actions .btn{flex:none;}
+.color-control{display:flex;align-items:center;gap:9px;max-width:245px;}
+.section .color-control input[type=text].color-hex{width:125px;min-width:0;height:40px;padding:8px 10px;flex:0 1 auto;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.2px;text-transform:uppercase;}
+.section .color-control input[type=color].color-chip{width:42px;min-width:42px;height:40px;padding:3px;border-radius:7px;cursor:pointer;flex:0 0 auto;}
+.color-control .color-hex[aria-invalid=true]{border-color:#c64c4c;background:#fff6f6;}
+@media(max-width:1060px){.preview-toolbar{padding-inline:16px}.preview-actions{gap:7px}.preview-actions .btn{padding-inline:8px}}
