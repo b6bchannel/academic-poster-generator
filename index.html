@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research Forum · Poster Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<script async src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script defer src="asset-data.js"></script>
+<script defer src="templates.js"></script>
+<script defer src="app.js"></script>
+</head>
+<body>
+<header class="app-header">
+  <div class="brand"><div><strong>Research Forum Studio</strong><small>学术活动海报生成器</small></div></div>
+  <div class="header-tools"><span class="save-tip" id="save-indicator">已在浏览器中保存</span><button id="clear-text" class="btn ghost">清空所有文字</button><button id="export-jpg" class="btn primary">导出高清 JPG</button></div>
+</header>
+<main class="workspace">
+<aside class="sidebar" id="sidebar">
+  <section class="section lead-section"><div class="section-top"><span class="eyebrow">01 / LAYOUT</span><h2>模板与配色</h2></div>
+    <label for="speaker-count">主讲人数量</label><div class="count-tabs" id="speaker-count"></div>
+    <label>颜色方案</label><div class="theme-list" id="theme-list"></div>
+  </section>
+  <section class="section"><div class="section-top"><span class="eyebrow">02 / CONTENT</span><h2>粘贴活动资料</h2></div>
+    <p class="hint">将邮件、Word 或聊天记录中的整段信息粘贴进来，自动尝试识别字段；识别结果可以逐项修正。</p>
+    <textarea id="raw-paste" rows="6" placeholder="Research Forum\nIntermedial Studies of Literature\nHosted by Dr. Bowen Wang...\nDate: November 26...\nSpeaker 1: ..."></textarea>
+    <div class="button-row"><button id="parse-btn" class="btn dark">自动识别并填充</button><button id="sample-btn" class="btn ghost">填入测试示例</button></div>
+    <div id="parse-report" class="parse-report" hidden></div>
+    <details class="unmatched" id="unmatched-box" hidden><summary>尚未识别的原始内容</summary><pre id="unmatched-text"></pre></details>
+  </section>
+  <section class="section"><div class="section-top"><span class="eyebrow">03 / EDIT</span><h2>内容校对</h2></div><div id="field-editor"></div></section>
+  <section class="section"><div class="section-top"><span class="eyebrow">04 / IMAGES</span><h2>图片替换</h2></div><p class="hint">背景和头像仅在本机处理，不上传到服务器。</p>
+    <label class="file-upload" for="background-file">替换背景照片 <span>选择图片</span></label><input id="background-file" type="file" accept="image/*" hidden>
+    <div class="image-editor" id="image-controls"></div>
+  </section>
+  <section class="section" id="element-editor-section"><div class="section-top"><span class="eyebrow">05 / FINE-TUNE</span><h2>排版微调</h2></div>
+    <p class="hint">点击预览中的色块或文字，可直接拖动调整位置；色块支持四角缩放，文字框支持右下角缩放，文字可双击编辑。</p>
+    <div id="element-editor" class="element-editor"><div class="empty">选中一个文本框后，这里会出现尺寸和字体设置。</div></div>
+  </section>
+  <section class="section section-foot"><button class="btn ghost full" id="reset-layout">恢复当前版式默认位置</button><p class="hint">数据会自动保存在当前浏览器。想重新填写资料，可使用页面右上角「清空所有文字」。</p></section>
+</aside>
+<section class="preview-area">
+  <div class="preview-toolbar"><div><strong>实时预览</strong><small id="template-info">海报预览</small></div><div class="preview-actions"><label class="toggle"><input id="show-guides" type="checkbox" checked> 编辑框</label><button class="btn ghost small" id="deselect">取消选择</button></div></div>
+  <div class="preview-stage" id="preview-stage"><div id="poster-holder" class="poster-holder"><div id="poster" class="poster"></div></div></div>
+  <div class="preview-footer"><span>海报设计尺寸 <b id="poster-size">850 × 1193</b></span><span id="render-status">可点击文字微调位置、大小和断行</span></div>
+</section>
+</main>
+
+<div id="toast" role="status"></div>
+</body></html>
