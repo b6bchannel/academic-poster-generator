@@ -1,43 +1,21 @@
-# Research Forum Poster Studio v7
-
-无需后端、账号或构建流程的静态网页海报生成器。根据原始 PPTX 的 1–4 位 Speaker 设计和配色预设开发。推荐 Chrome / Edge 桌面浏览器。
+# Research Forum Poster Studio v9
 
 ## 使用
 
-- 在左侧选择主讲人数量与配色，粘贴活动信息并点击「自动识别并填充」。识别后到「内容校对」手动修正字段。
-- 在左侧「图片替换」上传背景和各位 Speaker 头像；头像内部裁切用缩放、左右、上下滑块微调。**不要点击画布里的头像上传**。
-- 在海报预览中，文字框、色块、头像、地点图标都能用鼠标拖动。选中后文字/头像/地点图标可通过右下角手柄缩放，色块则有四角手柄。头像缩放始终为圆形，地点图标缩放保持比例。
-- JPG 以海报标题命名，并输出 4× 设计分辨率（约 3401 × 4772 像素）。
+直接使用 Chrome / Edge 打开 `index.html`，或将本文件夹**内的文件**上传到 GitHub 仓库根目录，再启用 GitHub Pages。无需 Node、Python、数据库或 API Key。
 
-## 部署到 GitHub Pages（无需安装 Node.js）
+所有默认头像均为虚构的博士帽女生插画。示例真人头像已从发布包和内嵌资源表中移除。用户上传的图片在其浏览器本地处理，不会发送到 GitHub。
 
-1. 新建 GitHub 仓库，将**本压缩包根目录里面的所有文件和 `assets/` 文件夹**放到仓库根目录。务必让 `index.html` 直接位于仓库根目录，而不是放在多余的一层 `academic-poster-demo/` 子文件夹里。
-2. 打开仓库 **Settings → Pages → Build and deployment**，Source 选 **Deploy from a branch**，Branch 选 `main`，Folder 选 `/(root)`，点击 Save。
-3. 待 Pages 部署完成，从 Pages 页面的链接进入网站。通常项目页地址是 `https://你的用户名.github.io/仓库名/`。
+## 主要交互
 
-同一份静态文件也可以放到 Cloudflare Pages 的发布目录。无需 npm 构建命令。
+- 选择 1–4 位主讲人、配色方案；粘贴整段信息自动识别，再修改字段。
+- 单人版以 Speaker 1 的演讲标题作为海报大标题；多人版使用活动标题。单人版导出文件名也使用演讲标题。
+- 在海报上拖动文字框、色块、头像与图标；选中后拖动右下角控制点缩放。
+- 图片上传、头像裁切在左侧「图片替换」。默认头像均为统一的插画占位，不包含真实人的肖像。
+- 🐶 favicon 保留；导出 JPG 最多 4× (约 3401 × 4772 px)。
 
-## 文件
+## 部署
 
-- `index.html`：网页入口
-- `styles.css`：编辑器及海报样式
-- `app.js`：资料识别、交互、图片处理与 JPG 导出
-- `templates.js`：从 PPTX 抽取的版式数据
-- `asset-data.js`：图片 Data URI 资源包，减少本地文件路径与导出跨域问题
-- `assets/`：图片和 Logo 等本地资源
-- `.nojekyll`：使 GitHub Pages 不执行 Jekyll 的处理
+将本目录里的 `index.html`、`app.js`、`styles.css`、`templates.js`、`asset-data.js`、`favicon.svg`、`.nojekyll` 和 `assets/` 一并上传到仓库根目录。GitHub > Settings > Pages > Deploy from a branch > main > /(root)。
 
-## 限制
-
-- Google Sans 通过 Google Fonts 在线加载；如果无法访问，会回退到系统字体，可能影响断行。
-- 优先调用 CDN 上的 `html2canvas` 生成 JPG；当该库无法加载时会使用内置 Canvas 兼容导出，个别字形、复杂文本布局可能和预览存在细微差异。
-- 活动资料识别为本地规则解析器，不是 AI API；复杂格式请人工核对。
-- 上传和编辑信息默认只保存在当前浏览器，不会上传至 GitHub 或网站服务器。请勿把含有隐私资料的实际讲座数据硬编码后提交到公开仓库。
-
-## v8：一人与四人版排版适配
-- 单人版重新组织主标题、主持、主讲人以及底部时间/地点区域，避免文字重叠。
-- 四人版使用独立的紧凑网格，分别规定四组讲座标题、头像、姓名和职称的位置与字号；长内容在有限范围内自动缩小（用户手动调整字号优先）。
-- 所有人数版的时间区间均改为单行显示，PM 独立且禁止拆行。
-- 四人版缺少第四位资料时在预览显示编辑占位提示；占位提示不会写入海报 JPG。
-- 在海报背景、Logo 和预览区域空白处点击可以取消对象选择。
-- 网页 favicon 使用 🐶。
+注意：Google Sans 在线加载可能受网络环境影响；网页会以系统字体回退。为兼容直接双击打开文件，默认图片也以 Data URI 方式内嵌到 asset-data.js；请勿将其删除。

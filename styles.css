@@ -34,3 +34,8 @@
 .poster-element.text-el[data-role="time"]{white-space:nowrap;overflow-wrap:normal;}
 .empty-placeholder{opacity:.72;font-size:.85em;font-style:italic;font-weight:400;color:inherit;}
 #export-poster .empty-placeholder{display:none!important;}
+
+/* v9: keep text measurement stable when selected; handle is outside the box. */
+.text-selection-overlay{pointer-events:none;z-index:15;border:2px dashed #00adcf;}
+.text-selection-grip{position:absolute;width:16px;height:16px;right:-9px;bottom:-9px;background:white;border:2px solid #00adcf;pointer-events:auto;cursor:nwse-resize;touch-action:none;box-shadow:0 1px 3px #3336;}
+#export-poster .text-selection-overlay{display:none!important;}

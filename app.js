@@ -16,7 +16,10 @@ const BASE_SLIDES={1:10,2:8,3:1,4:9};
 // The PPT exporter only carried a location illustration on slide 1. Restore
 // the missing location glyph as a normal positioned asset in every 2–4 speaker preset.
 for(const t of DB.templates){
- if(t.count===1){const pin=t.elements.find(e=>/lucide_map_pin_gold/i.test(e.src||''));if(pin)pin.role='locationIcon';}
+ if(t.count===1){
+  const pin=t.elements.find(e=>/lucide_map_pin_gold/i.test(e.src||''));if(pin)pin.role='locationIcon';
+  const clock=t.elements.find(e=>/lucide_clock_gold/i.test(e.src||''));if(clock)clock.role='timeIcon';
+ }
  const venue=t.elements.find(e=>e.role==='venue');
  if(!venue || t.count===1)continue;
  const original=t.elements.find(e=>/ppt_1_26/i.test(e.src||''));
@@ -34,20 +37,21 @@ for(const t of DB.templates){
  }
 }
 
-// The one-speaker PPT uses the talk as its headline. The editor also tracks a
-// separate event series title, so preserve BOTH without silently dropping the talk.
+// One speaker: the talk title IS the main headline, not a small secondary line.
+// Retain eventTitle in the data for multi-speaker templates, but do not
+// create a second visible title in the one-speaker design.
 const oneTemplate=DB.templates.find(t=>t.slide===10);
-if(oneTemplate&&!oneTemplate.elements.some(e=>e.role==='speaker1.title')){
- oneTemplate.elements.push({id:'solo_talk_title',kind:'text',role:'speaker1.title',
-  text:'',x:65,y:286,w:540,h:55,style:{size:21,weight:500,italic:false,color:'#ffffff',lineHeight:1.1},rotation:0,pptName:'单人讲座题目'});
-}
+const soloHero=oneTemplate?.elements.find(e=>e.role==='eventTitle');
+if(soloHero){soloHero.role='speaker1.title';soloHero.pptName='单人讲座大标题';}
+if(oneTemplate)oneTemplate.elements=oneTemplate.elements.filter(e=>e.id!=='solo_talk_title');
+const soloHeroId=soloHero?.id;
 
 function baseTemplate(count){const t=THEMES.find(t=>t.id===themeId);const slide=Number(count)===3?(t?.source||1):BASE_SLIDES[count];return DB.templates.find(x=>x.slide===slide)||DB.templates.find(x=>x.count===Number(count))}
-const KEY='research-poster-demo-v8';const V7_KEY='research-poster-demo-v7';const V6_KEY='research-poster-demo-v6';const V5_KEY='research-poster-demo-v5';const PREV_KEY='research-poster-demo-v4',OLDER_KEY='research-poster-demo-v3';
+const KEY='research-poster-demo-v9';const V7_KEY='research-poster-demo-v7';const V6_KEY='research-poster-demo-v6';const V5_KEY='research-poster-demo-v5';const PREV_KEY='research-poster-demo-v4',OLDER_KEY='research-poster-demo-v3';
 const normalizeSrc=src=>{if(!src)return src;if(/sjtu_logo_/i.test(src))return 'assets/sjtu_logo_hd.png';if(/sfl_logo_/i.test(src))return 'assets/sfl_logo_hd.png';if(src.includes('ppt_1_26'))return 'assets/lucide_map_pin.png';return src};
 const asset=src=>window.POSTER_ASSETS?.[normalizeSrc(src)]||normalizeSrc(src);
 const clone=v=>JSON.parse(JSON.stringify(v));
-const exportFilename=()=>{const raw=(fields.eventTitle||'Research Forum').replace(/\n+/g,' ').trim()||'Research Forum';const safe=raw.replace(/[\\/:*?"<>|]/g,' ').replace(/\s+/g,' ').trim().slice(0,120);return (safe||'Research Forum')+'.jpg'};
+const exportFilename=()=>{const header=template.count===1?(fields.speakers?.[0]?.title||fields.eventTitle):fields.eventTitle;const raw=(header||'Research Forum').replace(/\n+/g,' ').trim()||'Research Forum';const safe=raw.replace(/[\\/:*?"<>|]/g,' ').replace(/\s+/g,' ').trim().slice(0,120);return (safe||'Research Forum')+'.jpg'};
 const TOP_PANEL_SHIFT=18;
 const topInfoRoles=new Set(['day','month','weekday','time','ampm','dateLong','venue']);
 let template=DB.templates[0], selectedId=null, previewScale=0.55, fields={}, overrides={}, themeId='red', photoZoom=[1,1,1,1],photoY=[50,50,50,50],photoX=[50,50,50,50], backgrounds={}, photos=[], showGuides=true;
@@ -63,12 +67,12 @@ function defaults(){
   {title:'Jazz as Sonic Activism\nin Mongo Beti’s Crime Fiction',name:'Dr. Fei Xie (谢菲)',bio:'Lecturer in French Literature\nParis Elite Institute of Technology\nShanghai Jiao Tong University'},
   {title:'',name:'',bio:''}
  ]};
- photos=['assets/profile_1_15.jpg','assets/profile_1_19.png','assets/profile_1_23.png',null];
+ photos=Array(4).fill('assets/default_scholar.png');
 }
 defaults();
 function notify(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(notify.t);notify.t=setTimeout(()=>el.classList.remove('show'),3300)}
 function persist(){try{const p={templateId:template.slide,fields,overrides,panelOverrides,themeId,photoZoom,photoY,photoX,photos,backgrounds,monoBackground,bgFocusX,bgFocusY};const str=JSON.stringify(p);if(str.length<3.5e6)localStorage.setItem(KEY,str);$('save-indicator').textContent='已在浏览器中保存';}catch(err){$('save-indicator').textContent='建议下载配置文件';}}
-function loadSaved(){try{const raw=localStorage.getItem(KEY)||localStorage.getItem(V7_KEY)||localStorage.getItem(V6_KEY)||localStorage.getItem(V5_KEY)||localStorage.getItem(PREV_KEY)||localStorage.getItem(OLDER_KEY);if(!raw)return;const v=JSON.parse(raw);if(!v.fields||!v.templateId)return;template=baseTemplate((DB.templates.find(t=>t.slide===v.templateId)||template).count);fields=v.fields;fields.speakers=[...(fields.speakers||[])];while(fields.speakers.length<4)fields.speakers.push({title:'',name:'',bio:''});overrides=localStorage.getItem(KEY)?(v.overrides||{}):{};panelOverrides=v.panelOverrides||{};themeId=THEMES.some(t=>t.id===v.themeId)?v.themeId:({gold:'yellowwhite',slate:'graywhite',coral:'pinkwhite'}[v.themeId]||'red');photoZoom=v.photoZoom||[1,1,1,1];photoY=v.photoY||[50,50,50,50];photoX=v.photoX||[50,50,50,50];photos=v.photos||photos;backgrounds=v.backgrounds||{};monoBackground=v.monoBackground!==false;bgFocusX=v.bgFocusX??50;bgFocusY=v.bgFocusY??50;template=baseTemplate(template.count); }catch(e){console.warn('Cannot load saved project',e)}}
+function loadSaved(){try{const raw=localStorage.getItem(KEY)||localStorage.getItem(V7_KEY)||localStorage.getItem(V6_KEY)||localStorage.getItem(V5_KEY)||localStorage.getItem(PREV_KEY)||localStorage.getItem(OLDER_KEY);if(!raw)return;const v=JSON.parse(raw);if(!v.fields||!v.templateId)return;template=baseTemplate((DB.templates.find(t=>t.slide===v.templateId)||template).count);fields=v.fields;fields.speakers=[...(fields.speakers||[])];while(fields.speakers.length<4)fields.speakers.push({title:'',name:'',bio:''});overrides=localStorage.getItem(KEY)?(v.overrides||{}):{};panelOverrides=v.panelOverrides||{};themeId=THEMES.some(t=>t.id===v.themeId)?v.themeId:({gold:'yellowwhite',slate:'graywhite',coral:'pinkwhite'}[v.themeId]||'red');photoZoom=v.photoZoom||[1,1,1,1];photoY=v.photoY||[50,50,50,50];photoX=v.photoX||[50,50,50,50];photos=localStorage.getItem(KEY)?(v.photos||photos):Array(4).fill('assets/default_scholar.png');backgrounds=v.backgrounds||{};monoBackground=v.monoBackground!==false;bgFocusX=v.bgFocusX??50;bgFocusY=v.bgFocusY??50;template=baseTemplate(template.count); }catch(e){console.warn('Cannot load saved project',e)}}
 function getRole(role){if(!role)return null;const m=role.match(/^speaker(\d+)\.(title|name|bio)$/);if(m)return fields.speakers[Number(m[1])-1]?.[m[2]]??'';return fields[role]??null}
 function setRole(role,val){if(!role)return;const m=role.match(/^speaker(\d+)\.(title|name|bio)$/);if(m){fields.speakers[Number(m[1])-1][m[2]]=val}else fields[role]=val;}
 // Preserve the staggered pair of PPT rectangles.  Previous versions
@@ -79,8 +83,8 @@ const COMPOSITION_INSET=26;
 // All four participant counts have intentionally different typographic grids.
 // Geometry belongs to the template, not to a one-size-fits-all resizing rule.
 const LAYOUT_ONE={
- eventTitle:[64,64,550,175,39],host:[64,240,535,40,23],
- speakersLabel:[60,350,132,34,22],'speaker1.title':[64,285,539,58,21],
+ host:[64,243,535,40,23],
+ speakersLabel:[60,350,132,34,22],
  'speaker1.photo':[74,420,148,148],
  'speaker1.name':[242,429,410,48,31],
  'speaker1.bio':[245,488,393,110,20],
@@ -110,6 +114,7 @@ function defaultGeometry(e){
  else if(template.count===4)grid=LAYOUT_FOUR;
  const a=grid?.[e.role];
  if(a){b.x=a[0];b.y=a[1];b.w=a[2];b.h=a[3];if(a[4]!=null)b.style={...e.style,size:a[4],lineHeight:1.13};}
+ if(template.count===1 && e.id===soloHeroId){b.x=64;b.y=64;b.w=550;b.h=168;b.style={...e.style,size:39,weight:700,italic:false,lineHeight:1.12};}
  if(template.count===1){
   if(e.kind==='rect' && e.id===template.elements.find(t=>t.kind==='rect')?.id){Object.assign(b,{x:48,y:0,w:605,h:633});}
   if(e.kind==='rect' && e.id===template.elements.filter(t=>t.kind==='rect')[1]?.id){Object.assign(b,{x:50,y:876,w:616,h:317});}
@@ -207,7 +212,7 @@ function setPanelProperty(src,key,value){
 }
 function make(tag,cls,style){const el=document.createElement(tag);if(cls)el.className=cls;if(style)Object.assign(el.style,style);return el}
 function dimensions(e){return {left:e.x+'px',top:e.y+'px',width:Math.max(1,e.w)+'px',height:Math.max(1,e.h)+'px'}}
-function isEditableImage(e){return e.kind==='portrait'||e.role==='locationIcon'}
+function isEditableImage(e){return e.kind==='portrait'||e.role==='locationIcon'||e.role==='timeIcon'}
 function imageSelectionOverlay(e){
  const outline=make('div','poster-element asset-selection '+(e.kind==='portrait'?'portrait-selection':'icon-selection'),dimensions(e));
  outline.dataset.controlFor=e.id;
@@ -216,7 +221,7 @@ function imageSelectionOverlay(e){
  outline.append(grip);return outline;
 }
 function updateSelectionOverlay(e){
- const node=[...$('poster').querySelectorAll('.asset-selection')].find(x=>x.dataset.controlFor===e.id);
+ const node=[...$('poster').querySelectorAll('.asset-selection,.text-selection-overlay')].find(x=>x.dataset.controlFor===e.id);
  if(node)Object.assign(node.style,dimensions(e));
 }
 
@@ -305,7 +310,9 @@ function renderPoster(){
     el.title='点击选中，拖动定位；双击编辑文字';
     el.addEventListener('pointerdown',event=>startDrag(event,e.id,false));
     el.addEventListener('dblclick',event=>beginInlineEdit(event,e.id));
-    if(selectedId===e.id){const h=make('div','resize-handle');h.addEventListener('pointerdown',event=>startDrag(event,e.id,true));el.append(h)}
+    // Resize control is a sibling overlay, NOT a child of the text box.
+    // A child handle extending below the box changes scrollHeight and erroneously
+    // triggers automatic font shrinking as soon as the user selects text.
    }
   }else return;
   p.append(el);
@@ -313,6 +320,15 @@ function renderPoster(){
  if(showGuides && selectedId){
    const selected=template.elements.find(e=>e.id===selectedId);
    if(selected&&isEditableImage(selected))p.append(imageSelectionOverlay(effective(selected)));
+   if(selected?.kind==='text'){
+     const textBox=effective(selected);
+     const outline=make('div','poster-element text-selection-overlay',dimensions(textBox));
+     outline.dataset.controlFor=selected.id;
+     const handle=make('div','text-selection-grip');
+     handle.title='拖动调整文本框宽高，不改变字号';
+     handle.addEventListener('pointerdown',ev=>startDrag(ev,selected.id,true));
+     outline.append(handle);p.append(outline);
+   }
  }
  positionMeridian();
  $('template-info').textContent=`${template.count} 位主讲人 · ${chosenTheme().name}`;
@@ -415,7 +431,7 @@ function renderControls(){
 }
 const section=(title)=>{const root=make('div','field-group');const h=make('div','field-group-title');h.textContent=title;root.append(h);return root};
 function field(label,role,rows=1){const wrap=make('div','field');const lbl=make('label');lbl.textContent=label;const ctrl=rows>1?make('textarea'):make('input');if(rows>1)ctrl.rows=rows;else ctrl.type='text';ctrl.value=getRole(role)||'';ctrl.addEventListener('input',()=>{setRole(role,ctrl.value);renderPoster();persist()});wrap.append(lbl,ctrl);return wrap}
-function renderFieldEditor(){const root=$('field-editor');root.replaceChildren();const basic=section('活动基本信息');basic.append(field('活动标题（Enter 换行）','eventTitle',3),field('主持人 / Chair','host',2));root.append(basic);
+function renderFieldEditor(){const root=$('field-editor');root.replaceChildren();const basic=section('活动基本信息');if(template.count!==1)basic.append(field('活动标题（Enter 换行）','eventTitle',3));basic.append(field('主持人 / Chair','host',2));root.append(basic);
  const when=section('日期与地点');const date=make('div','form-grid');date.append(field('日期数字','day'),field('月份','month'),field('星期','weekday'),field('AM / PM','ampm'));when.append(date,field('开始与结束时间','time',2),field('日期完整写法（1人/4人版）','dateLong'),field('活动地点','venue',3));root.append(when);
  for(let n=1;n<=template.count;n++){const sp=section(`主讲人 ${n}`);sp.append(field('演讲标题',`speaker${n}.title`,2),field('姓名',`speaker${n}.name`),field('职称及机构',`speaker${n}.bio`,3));root.append(sp)}
 }
@@ -423,7 +439,7 @@ function renderImages(){const root=$('image-controls');root.replaceChildren();
  const mono=make('label');mono.style.display='flex';mono.style.alignItems='center';mono.style.gap='8px';const chk=make('input');chk.type='checkbox';chk.checked=monoBackground;chk.style.width='auto';chk.onchange=()=>{monoBackground=chk.checked;renderPoster();persist()};mono.append(chk,document.createTextNode('背景黑白与淡化'));root.append(mono);
  const blbl=make('label');blbl.textContent='背景裁切水平位置';const br=make('input');br.type='range';br.min=0;br.max=100;br.value=bgFocusX;br.oninput=()=>{bgFocusX=Number(br.value);renderPoster();persist()};root.append(blbl,br);
  for(let n=0;n<template.count;n++){
- const wrap=make('div','image-item');const img=make('img','photo-thumb');img.src=asset(photos[n]||'assets/speaker_'+(n+1)+'.png');if(n===3&&!photos[n])img.style.opacity='.15';
+ const wrap=make('div','image-item');const img=make('img','photo-thumb');img.src=asset(photos[n]||'assets/default_scholar.png');
  const ct=make('div');const label=make('b');label.textContent=`Speaker ${n+1} 头像`;
  const open=make('button');open.textContent='替换图片';open.onclick=()=>selectPortrait(n);
  const z=make('input');z.type='range';z.min=1;z.max=2.5;z.step=.05;z.value=photoZoom[n]||1;z.title='头像缩放';z.addEventListener('input',()=>{photoZoom[n]=Number(z.value);renderPoster();persist()});
@@ -462,7 +478,7 @@ function renderElementEditor(lite=false){const root=$('element-editor');const sr
    const e=effective(src);
    if(lite){root.querySelectorAll('input[data-prop]').forEach(inp=>{inp.value=Math.round(e[inp.dataset.prop]??0)});return}
    root.replaceChildren();
-   const header=make('div','field-group-title');header.textContent=src.kind==='portrait'?'头像位置与大小':'地点图标位置与大小';root.append(header);
+   const header=make('div','field-group-title');header.textContent=src.kind==='portrait'?'头像位置与大小':(src.role==='timeIcon'?'时间图标位置与大小':'地点图标位置与大小');root.append(header);
    const note=make('p','hint');note.textContent=src.kind==='portrait'?'直接拖动头像，或拉动右下角调整直径；更换照片与裁切在左侧操作。':'直接拖动图标，或拉动右下角缩放。';root.append(note);
    const grid=make('div','two-col');
    [['x','水平位置'],['y','垂直位置'],['w',src.kind==='portrait'?'直径':'宽度']].forEach(([key,label])=>{
@@ -477,7 +493,7 @@ function renderElementEditor(lite=false){const root=$('element-editor');const sr
 
  if(!src||src.kind!=='text'){if(!lite){root.replaceChildren();const msg=make('div','empty');msg.textContent='点击海报上的色块或文字，拖动调整位置；拖动边角调整大小。';root.append(msg)}return;}
  const e=effective(src);if(lite){root.querySelectorAll('input[data-prop]').forEach(inp=>{inp.value=e[inp.dataset.prop]??''});return}
- root.replaceChildren();const role=make('div','fine-info');role.textContent=`对象：${src.role||src.pptName} · 源自 PPT 第 ${template.slide} 页`;root.append(role);
+ root.replaceChildren();const role=make('div','fine-info');role.textContent=`对象：${src.id===soloHeroId?'演讲主标题':(src.role||src.pptName)} · 源自 PPT 第 ${template.slide} 页`;root.append(role);
  const content=make('textarea');content.rows=3;content.value=val(e);content.oninput=()=>{if(src.role?.startsWith('extra.')){overrides[src.id]||={};overrides[src.id].text=content.value}else setRole(src.role,content.value);renderPoster();persist()};root.append(content);
  const grid=make('div','two-col');[['x','X 位置'],['y','Y 位置'],['w','文本框宽度'],['h','文本框高度']].forEach(([key,name])=>{
   const cell=make('div','field-small');const label=make('label');label.textContent=name;const inp=make('input');inp.type='number';inp.dataset.prop=key;inp.value=e[key];inp.step=1;inp.addEventListener('change',()=>{overrides[src.id]||={};overrides[src.id][key]=Number(inp.value);renderPoster();persist()});cell.append(label,inp);grid.append(cell)});root.append(grid);
