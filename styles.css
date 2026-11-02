@@ -29,3 +29,8 @@
 .asset-selection.icon-selection{border:2px dashed #00add2;box-shadow:none}
 .asset-grip{position:absolute;right:-10px;bottom:-10px;width:18px;height:18px;border:2px solid #00add2;background:white;box-shadow:0 1px 4px #30394466;cursor:nwse-resize;pointer-events:auto;touch-action:none}
 #export-poster .asset-selection{display:none!important}
+
+/* v8: the time range is an indivisible label, not two lines. */
+.poster-element.text-el[data-role="time"]{white-space:nowrap;overflow-wrap:normal;}
+.empty-placeholder{opacity:.72;font-size:.85em;font-style:italic;font-weight:400;color:inherit;}
+#export-poster .empty-placeholder{display:none!important;}

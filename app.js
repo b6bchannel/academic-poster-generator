@@ -34,6 +34,14 @@ for(const t of DB.templates){
  }
 }
 
+// The one-speaker PPT uses the talk as its headline. The editor also tracks a
+// separate event series title, so preserve BOTH without silently dropping the talk.
+const oneTemplate=DB.templates.find(t=>t.slide===10);
+if(oneTemplate&&!oneTemplate.elements.some(e=>e.role==='speaker1.title')){
+ oneTemplate.elements.push({id:'solo_talk_title',kind:'text',role:'speaker1.title',
+  text:'',x:65,y:286,w:540,h:55,style:{size:21,weight:500,italic:false,color:'#ffffff',lineHeight:1.1},rotation:0,pptName:'单人讲座题目'});
+}
+
 function baseTemplate(count){const t=THEMES.find(t=>t.id===themeId);const slide=Number(count)===3?(t?.source||1):BASE_SLIDES[count];return DB.templates.find(x=>x.slide===slide)||DB.templates.find(x=>x.count===Number(count))}
 const KEY='research-poster-demo-v8';const V7_KEY='research-poster-demo-v7';const V6_KEY='research-poster-demo-v6';const V5_KEY='research-poster-demo-v5';const PREV_KEY='research-poster-demo-v4',OLDER_KEY='research-poster-demo-v3';
 const normalizeSrc=src=>{if(!src)return src;if(/sjtu_logo_/i.test(src))return 'assets/sjtu_logo_hd.png';if(/sfl_logo_/i.test(src))return 'assets/sfl_logo_hd.png';if(src.includes('ppt_1_26'))return 'assets/lucide_map_pin.png';return src};
@@ -68,14 +76,66 @@ function setRole(role,val){if(!role)return;const m=role.match(/^speaker(\d+)\.(t
 // Shift the whole editable composition right by one consistent inset instead;
 // left/right differences between PPT objects remain intact.
 const COMPOSITION_INSET=26;
+// All four participant counts have intentionally different typographic grids.
+// Geometry belongs to the template, not to a one-size-fits-all resizing rule.
+const LAYOUT_ONE={
+ eventTitle:[64,64,550,175,39],host:[64,240,535,40,23],
+ speakersLabel:[60,350,132,34,22],'speaker1.title':[64,285,539,58,21],
+ 'speaker1.photo':[74,420,148,148],
+ 'speaker1.name':[242,429,410,48,31],
+ 'speaker1.bio':[245,488,393,110,20],
+ time:[171,917,332,50,37],ampm:[520,925,66,39,23],dateLong:[172,969,400,36,22],
+ venue:[172,1058,418,112,22],
+ locationIcon:[80,1048,53,64]
+};
+const LAYOUT_FOUR={
+ eventTitle:[65,35,552,120,35],host:[65,174,535,38,22],
+ time:[91,292,234,49,33],ampm:[330,298,58,35,22],dateLong:[91,338,281,34,21],
+ venue:[462,284,204,98,20],locationIcon:[399,293,43,54],
+ speakersLabel:[6,479,134,38,20]
+};
+for(let n=1;n<=4;n++){
+ const y=423+(n-1)*190;
+ LAYOUT_FOUR[`speaker${n}.title`]=[111,y,530,58,23];
+ LAYOUT_FOUR[`speaker${n}.photo`]=[115,y+61,94,94];
+ LAYOUT_FOUR[`speaker${n}.name`]=[234,y+61,414,40,23];
+ LAYOUT_FOUR[`speaker${n}.bio`]=[236,y+97,412,80,16.5];
+}
 function defaultGeometry(e){
  const b={...e};
  if(e.kind==='background'||(e.kind==='image'&&/(?:sjtu|sfl)_logo_/i.test(e.src||'')))return b;
  b.x+=COMPOSITION_INSET;
+ let grid;
+ if(template.count===1)grid=LAYOUT_ONE;
+ else if(template.count===4)grid=LAYOUT_FOUR;
+ const a=grid?.[e.role];
+ if(a){b.x=a[0];b.y=a[1];b.w=a[2];b.h=a[3];if(a[4]!=null)b.style={...e.style,size:a[4],lineHeight:1.13};}
+ if(template.count===1){
+  if(e.kind==='rect' && e.id===template.elements.find(t=>t.kind==='rect')?.id){Object.assign(b,{x:48,y:0,w:605,h:633});}
+  if(e.kind==='rect' && e.id===template.elements.filter(t=>t.kind==='rect')[1]?.id){Object.assign(b,{x:50,y:876,w:616,h:317});}
+  if(e.kind==='line'){Object.assign(b,{x:193,y:374,w:360,h:.16});}
+  if(/lucide_clock_gold/i.test(e.src||'')){Object.assign(b,{x:83,y:911,w:52,h:52});}
+  if(/lucide_map_pin_gold/i.test(e.src||'')){Object.assign(b,{x:81,y:1045,w:52,h:59});}
+ }
+ if(template.count===4){
+  if(e.kind==='rect' && e.id===template.elements.find(t=>t.kind==='rect')?.id){Object.assign(b,{x:48,y:0,w:608,h:410});}
+  if(e.kind==='rect' && e.id===template.elements.filter(t=>t.kind==='rect')[1]?.id){Object.assign(b,{x:63,y:263,w:653,h:930});}
+  if(e.kind==='line')Object.assign(b,{x:92,y:536,w:0,h:634});
+ }
+ // The time range is always one typographic unit; never split at the en dash.
+ if(template.count===2 && e.role==='time'){Object.assign(b,{x:377,y:410,w:235,h:52});b.style={...e.style,size:32};}
+ if(template.count===2 && e.role==='ampm'){Object.assign(b,{x:590,y:415,w:52,h:37});b.style={...e.style,size:21};}
+ if(template.count===3 && e.role==='time'){Object.assign(b,{x:402,y:259,w:225,h:52});b.style={...e.style,size:32};}
+ if(template.count===3 && e.role==='ampm'){Object.assign(b,{x:611,y:266,w:51,h:33});b.style={...e.style,size:20};}
  return b;
 }
+function displayedText(e){
+ const raw=val(e);
+ if(e.role==='time')return String(raw).replace(/\s*[\r\n]+\s*/g,' ').replace(/\s+/g,' ').trim();
+ return raw;
+}
 
-function effective(e){const patch=overrides[e.id]||{};return {...defaultGeometry(e),...patch,style:{...(e.style||{}),...(patch.style||{})}}}
+function effective(e){const base=defaultGeometry(e),patch=overrides[e.id]||{};return {...base,...patch,style:{...(base.style||{}),...(patch.style||{})}}}
 function val(e){const data=getRole(e.role);return data!==null?data:e.text||''}
 function chosenTheme(){return THEMES.find(t=>t.id===themeId)||THEMES[0]}
 function isLight(hex){if(!hex)return false;let a=hex.replace('#','');if(a.length!==6)return false;const [r,g,b]=[0,2,4].map(i=>parseInt(a.slice(i,i+2),16));return(r*299+g*587+b*114)/1000>174}
@@ -160,6 +220,18 @@ function updateSelectionOverlay(e){
  if(node)Object.assign(node.style,dimensions(e));
 }
 
+function positionMeridian(){
+ const all=[...$('poster').querySelectorAll('.text-el')];
+ const byRole=role=>all.find(el=>template.elements.some(x=>x.id===el.dataset.source && x.role===role));
+ const clock=byRole('time'),ap=byRole('ampm');
+ if(!clock||!ap||!clock.textContent||!ap.textContent)return;
+ const source=template.elements.find(e=>e.id===ap.dataset.source);
+ if(overrides[source.id]?.x!=null)return; // deliberate manual placement
+ const cs=getComputedStyle(clock),measure=document.createElement('canvas').getContext('2d');
+ measure.font=`${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+ const right=parseFloat(clock.style.left)+4+measure.measureText(clock.textContent).width;
+ ap.style.left=Math.round(Math.min(W-55,right+14))+'px';
+}
 function renderPoster(){
  const p=$('poster');p.replaceChildren();p.classList.toggle('show-guides',showGuides);
  const bgOverride=backgrounds.current;
@@ -221,10 +293,11 @@ function renderPoster(){
      const room=Math.max(e.w,Math.min(450,W-e.x-38));
      el.style.width=room+'px';el.style.whiteSpace='nowrap';
    }
-   const value=val(e);
+   if(e.role==='time'||e.role==='ampm'){el.style.whiteSpace='nowrap';el.style.overflowWrap='normal';}
+   const value=displayedText(e);
    if(e.role==='eventTitle'&&template.slide===1&&value.includes('\n')){
     const [top,...rest]=value.split('\n');const a=make('span','poster-title-main');a.textContent=top;const b=make('span','poster-title-sub');b.textContent=rest.join('\n');el.append(a,b);
-   }else if(template.slide===1&&e.role==='speaker1.title'&&value.includes('Künstlerroman')){const [before,after]=value.split('Künstlerroman');el.append(document.createTextNode(before));const em=make('em');em.textContent='Künstlerroman';el.append(em,document.createTextNode(after||''))}else if(e.role==='venue'&&value.includes('\n')){const [lead,...rest]=value.split('\n');const a=make('span');a.style.display='block';a.style.fontWeight='700';a.textContent=lead;const b=make('span');b.style.display='block';b.style.fontWeight='400';b.style.fontSize='.78em';b.textContent=rest.join('\n');el.append(a,b)}else el.textContent=value;
+   }else if(template.slide===1&&e.role==='speaker1.title'&&value.includes('Künstlerroman')){const [before,after]=value.split('Künstlerroman');el.append(document.createTextNode(before));const em=make('em');em.textContent='Künstlerroman';el.append(em,document.createTextNode(after||''))}else if(e.role==='venue'&&value.includes('\n')){const [lead,...rest]=value.split('\n');const a=make('span');a.style.display='block';a.style.fontWeight='700';a.textContent=lead;const b=make('span');b.style.display='block';b.style.fontWeight='400';b.style.fontSize='.78em';b.textContent=rest.join('\n');el.append(a,b)}else if(!value && template.count===4 && /^speaker4\.(title|name|bio)$/.test(e.role||'')){const hint=make('span','empty-placeholder');hint.textContent=e.role.endsWith('.title')?'Talk title · 请填写':e.role.endsWith('.name')?'Speaker 4 · 待填写':'Title / Affiliation';el.append(hint)}else el.textContent=value;
    el.dataset.source=e.id;
    if(showGuides){
     el.dataset.key=e.id;
@@ -241,14 +314,34 @@ function renderPoster(){
    const selected=template.elements.find(e=>e.id===selectedId);
    if(selected&&isEditableImage(selected))p.append(imageSelectionOverlay(effective(selected)));
  }
+ positionMeridian();
  $('template-info').textContent=`${template.count} 位主讲人 · ${chosenTheme().name}`;
  $('poster-size').textContent=`${Math.round(W)} × ${Math.round(H)}（设计坐标）`;
  updateOverflows();
 }
 function updateOverflows(){requestAnimationFrame(()=>{document.querySelectorAll('#poster .text-el').forEach(el=>{
- // height is a guidance boundary, not a destructive clipping region
+ // Small layouts must adapt to real text, instead of inheriting an oversized
+ // font from the PPT placeholder. A manually-set font size always wins.
+ const source=template.elements.find(item=>item.id===el.dataset.source),role=source?.role||'';
+ const userSize=overrides[el.dataset.source]?.style?.size;
+ let minimum=null;
+ if(!userSize && !el.isContentEditable){
+  if(template.count===4){
+   if(/^speaker\d+\.title$/.test(role))minimum=17;
+   else if(/^speaker\d+\.bio$/.test(role))minimum=13;
+   else if(role==='venue')minimum=16;
+   else if(role==='eventTitle')minimum=29;
+  }else if(template.count===1){
+   if(role==='eventTitle')minimum=31;
+   else if(role==='speaker1.bio')minimum=17;
+  }
+ }
+ if(minimum!=null && el.scrollHeight>el.offsetHeight+4){
+  let fs=parseFloat(el.style.fontSize);
+  while(fs>minimum && el.scrollHeight>el.offsetHeight+4){fs=Math.max(minimum,fs-0.5);el.style.fontSize=fs+'px';}
+ }
  const tooHigh=el.scrollHeight>el.offsetHeight+7;
- el.classList.toggle('overflowed',tooHigh);
+ el.classList.toggle('overflowed',tooHigh && showGuides && selectedId===el.dataset.source);
  });});}
 function updateScale(){const st=$('preview-stage');if(!st||!st.clientWidth)return;const pad=window.innerWidth>750?80:24;const width=Math.max(200,st.clientWidth-pad),height=window.innerWidth>750?window.innerHeight-230:650;previewScale=Math.min(width/W,height/H,.83);$('poster-holder').style.width=(W*previewScale)+'px';$('poster-holder').style.height=(H*previewScale)+'px';$('poster').style.transform=`scale(${previewScale})`;}
 function setSelection(id){selectedId=id;renderPoster();renderElementEditor()}
@@ -607,6 +700,7 @@ async function drawFallback(){const canvas=document.createElement('canvas');canv
    }
   }
   if(e.kind==='text'){
+   if(!val(e)){ctx.restore();continue;}
    const posterRect=$('poster').getBoundingClientRect();
    if(!e.rotation && drawExactText(ctx,e,posterRect)){
     // CSS content layout is measured per glyph and projected into original design space.
@@ -615,7 +709,7 @@ async function drawFallback(){const canvas=document.createElement('canvas');canv
     ctx.fillStyle=colorFor(e);ctx.font=`${font.italic?'italic ':''}${font.weight||400} ${fs}px 'Google Sans',Arial,sans-serif`;
     ctx.textBaseline='top';
     if(e.rotation){ctx.translate(e.x+e.w/2,e.y+e.h/2);ctx.rotate(e.rotation*Math.PI/180);ctx.translate(-e.x-e.w/2,-e.y-e.h/2)}
-    let y=e.y;for(const line of val(e).split('\n')){ctx.fillText(line,e.x+4,y);y+=fs*(font.lineHeight||1.13)}
+    let y=e.y;for(const line of displayedText(e).split('\n')){ctx.fillText(line,e.x+4,y);y+=fs*(font.lineHeight||1.13)}
    }
   }
   ctx.restore();
@@ -632,6 +726,7 @@ function bind(){
  $('background-file').onchange=e=>{const file=e.target.files?.[0];if(file)readImage(file,async src=>{backgrounds.current=src;try{backgrounds.processed=await preprocessPhoto(src)}catch(err){console.warn('Background recolor failed',err);backgrounds.processed=src;}renderPoster();persist();notify('背景图已替换')})};
  $('show-guides').onchange=e=>{showGuides=e.target.checked;selectedId=null;renderPoster();renderElementEditor()};$('deselect').onclick=()=>setSelection(null);
  $('poster').addEventListener('click',e=>{if(e.target===$('poster'))setSelection(null)});
+ $('preview-stage').addEventListener('pointerdown',e=>{if(e.target.matches('.preview-stage,.poster-holder,.poster,.poster-element.background,.poster-element.logo,.poster-element.line'))setSelection(null)});
  window.addEventListener('resize',updateScale);if(window.ResizeObserver){new ResizeObserver(updateScale).observe($('preview-stage'))}
 }
 window.__posterTest={analyze,separateDateTime,THEMES,baseTemplate,linkedPanelMembers};loadSaved();bind();refresh();
