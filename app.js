@@ -13,28 +13,20 @@ const THEMES=[
  {id:'pinkyellow',name:'粉黄',panelTop:'#FFC000',panelBottom:'#EF232C',accent:'#FFD863',text:'#FFFFFF',bio:'#FFFFFF',source:7}
 ];
 const BASE_SLIDES={1:10,2:8,3:1,4:9};
-// The PPT exporter only carried a location illustration on slide 1. Restore
-// the missing location glyph as a normal positioned asset in every 2–4 speaker preset.
+// One vector location marker is added to each multi-speaker template;
+// stroke color always tracks the time text accent.
 for(const t of DB.templates){
- if(t.count===1){
-  const pin=t.elements.find(e=>/lucide_map_pin_gold/i.test(e.src||''));if(pin)pin.role='locationIcon';
-  const clock=t.elements.find(e=>/lucide_clock_gold/i.test(e.src||''));if(clock)clock.role='timeIcon';
- }
  const venue=t.elements.find(e=>e.role==='venue');
  if(!venue || t.count===1)continue;
- const original=t.elements.find(e=>/ppt_1_26/i.test(e.src||''));
- if(original){
-   original.role='locationIcon';
-   original.x=venue.x-70;original.y=venue.y-4;
-   original.w=54;original.h=68;
-   venue.x+=15; // clear optical gutter between a larger icon and the venue text
- }else{
-   // PPT did not include a usable location icon: reserve a proper icon gutter.
-   venue.x+=35;
-   t.elements.push({id:`location_${t.slide}`,kind:'image',role:'locationIcon',src:'assets/lucide_map_pin.png',
-     x:venue.x-70,y:venue.y-4,w:54,h:68,pptName:'Location icon'});
-   venue.x+=15;
- }
+ // Relocate the icon relative to the actual venue text, not the colored block edge.
+ // The old venue.x-70 calculation ran BEFORE changing venue.x (+50), making
+ // the symbol appear more than 80 design pixels left of its own text.
+ const icon=t.elements.find(e=>e.role==='locationIcon');
+ venue.x+=icon?15:50;
+ const iconBox={x:venue.x-64,y:venue.y-2,w:52,h:62};
+ if(icon){Object.assign(icon,iconBox,{kind:'icon',iconType:'mapPin'});delete icon.src;}
+ else t.elements.push({id:`location_${t.slide}`,kind:'icon',role:'locationIcon',iconType:'mapPin',
+   ...iconBox,pptName:'Location icon'});
 }
 
 // One speaker: the talk title IS the main headline, not a small secondary line.
@@ -47,8 +39,8 @@ if(oneTemplate)oneTemplate.elements=oneTemplate.elements.filter(e=>e.id!=='solo_
 const soloHeroId=soloHero?.id;
 
 function baseTemplate(count){const t=THEMES.find(t=>t.id===themeId);const slide=Number(count)===3?(t?.source||1):BASE_SLIDES[count];return DB.templates.find(x=>x.slide===slide)||DB.templates.find(x=>x.count===Number(count))}
-const KEY='research-poster-demo-v9';const V7_KEY='research-poster-demo-v7';const V6_KEY='research-poster-demo-v6';const V5_KEY='research-poster-demo-v5';const PREV_KEY='research-poster-demo-v4',OLDER_KEY='research-poster-demo-v3';
-const normalizeSrc=src=>{if(!src)return src;if(/sjtu_logo_/i.test(src))return 'assets/sjtu_logo_hd.png';if(/sfl_logo_/i.test(src))return 'assets/sfl_logo_hd.png';if(src.includes('ppt_1_26'))return 'assets/lucide_map_pin.png';return src};
+const KEY='research-poster-demo-v10';const V9_KEY='research-poster-demo-v9';const V7_KEY='research-poster-demo-v7';const V6_KEY='research-poster-demo-v6';const V5_KEY='research-poster-demo-v5';const PREV_KEY='research-poster-demo-v4',OLDER_KEY='research-poster-demo-v3';
+const normalizeSrc=src=>{if(!src)return src;if(/sjtu_logo_/i.test(src))return 'assets/sjtu_logo_hd.png';if(/sfl_logo_/i.test(src))return 'assets/sfl_logo_hd.png';return src};
 const asset=src=>window.POSTER_ASSETS?.[normalizeSrc(src)]||normalizeSrc(src);
 const clone=v=>JSON.parse(JSON.stringify(v));
 const exportFilename=()=>{const header=template.count===1?(fields.speakers?.[0]?.title||fields.eventTitle):fields.eventTitle;const raw=(header||'Research Forum').replace(/\n+/g,' ').trim()||'Research Forum';const safe=raw.replace(/[\\/:*?"<>|]/g,' ').replace(/\s+/g,' ').trim().slice(0,120);return (safe||'Research Forum')+'.jpg'};
@@ -72,7 +64,7 @@ function defaults(){
 defaults();
 function notify(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(notify.t);notify.t=setTimeout(()=>el.classList.remove('show'),3300)}
 function persist(){try{const p={templateId:template.slide,fields,overrides,panelOverrides,themeId,photoZoom,photoY,photoX,photos,backgrounds,monoBackground,bgFocusX,bgFocusY};const str=JSON.stringify(p);if(str.length<3.5e6)localStorage.setItem(KEY,str);$('save-indicator').textContent='已在浏览器中保存';}catch(err){$('save-indicator').textContent='建议下载配置文件';}}
-function loadSaved(){try{const raw=localStorage.getItem(KEY)||localStorage.getItem(V7_KEY)||localStorage.getItem(V6_KEY)||localStorage.getItem(V5_KEY)||localStorage.getItem(PREV_KEY)||localStorage.getItem(OLDER_KEY);if(!raw)return;const v=JSON.parse(raw);if(!v.fields||!v.templateId)return;template=baseTemplate((DB.templates.find(t=>t.slide===v.templateId)||template).count);fields=v.fields;fields.speakers=[...(fields.speakers||[])];while(fields.speakers.length<4)fields.speakers.push({title:'',name:'',bio:''});overrides=localStorage.getItem(KEY)?(v.overrides||{}):{};panelOverrides=v.panelOverrides||{};themeId=THEMES.some(t=>t.id===v.themeId)?v.themeId:({gold:'yellowwhite',slate:'graywhite',coral:'pinkwhite'}[v.themeId]||'red');photoZoom=v.photoZoom||[1,1,1,1];photoY=v.photoY||[50,50,50,50];photoX=v.photoX||[50,50,50,50];photos=localStorage.getItem(KEY)?(v.photos||photos):Array(4).fill('assets/default_scholar.png');backgrounds=v.backgrounds||{};monoBackground=v.monoBackground!==false;bgFocusX=v.bgFocusX??50;bgFocusY=v.bgFocusY??50;template=baseTemplate(template.count); }catch(e){console.warn('Cannot load saved project',e)}}
+function loadSaved(){try{const raw=localStorage.getItem(KEY)||localStorage.getItem(V9_KEY)||localStorage.getItem(V7_KEY)||localStorage.getItem(V6_KEY)||localStorage.getItem(V5_KEY)||localStorage.getItem(PREV_KEY)||localStorage.getItem(OLDER_KEY);if(!raw)return;const v=JSON.parse(raw);if(!v.fields||!v.templateId)return;template=baseTemplate((DB.templates.find(t=>t.slide===v.templateId)||template).count);fields=v.fields;fields.speakers=[...(fields.speakers||[])];while(fields.speakers.length<4)fields.speakers.push({title:'',name:'',bio:''});overrides=localStorage.getItem(KEY)?(v.overrides||{}):{};panelOverrides=v.panelOverrides||{};themeId=THEMES.some(t=>t.id===v.themeId)?v.themeId:({gold:'yellowwhite',slate:'graywhite',coral:'pinkwhite'}[v.themeId]||'red');photoZoom=v.photoZoom||[1,1,1,1];photoY=v.photoY||[50,50,50,50];photoX=v.photoX||[50,50,50,50];photos=localStorage.getItem(KEY)?(v.photos||photos):Array(4).fill('assets/default_scholar.png');backgrounds=v.backgrounds||{};monoBackground=v.monoBackground!==false;bgFocusX=v.bgFocusX??50;bgFocusY=v.bgFocusY??50;template=baseTemplate(template.count); }catch(e){console.warn('Cannot load saved project',e)}}
 function getRole(role){if(!role)return null;const m=role.match(/^speaker(\d+)\.(title|name|bio)$/);if(m)return fields.speakers[Number(m[1])-1]?.[m[2]]??'';return fields[role]??null}
 function setRole(role,val){if(!role)return;const m=role.match(/^speaker(\d+)\.(title|name|bio)$/);if(m){fields.speakers[Number(m[1])-1][m[2]]=val}else fields[role]=val;}
 // Preserve the staggered pair of PPT rectangles.  Previous versions
@@ -119,8 +111,8 @@ function defaultGeometry(e){
   if(e.kind==='rect' && e.id===template.elements.find(t=>t.kind==='rect')?.id){Object.assign(b,{x:48,y:0,w:605,h:633});}
   if(e.kind==='rect' && e.id===template.elements.filter(t=>t.kind==='rect')[1]?.id){Object.assign(b,{x:50,y:876,w:616,h:317});}
   if(e.kind==='line'){Object.assign(b,{x:193,y:374,w:360,h:.16});}
-  if(/lucide_clock_gold/i.test(e.src||'')){Object.assign(b,{x:83,y:911,w:52,h:52});}
-  if(/lucide_map_pin_gold/i.test(e.src||'')){Object.assign(b,{x:81,y:1045,w:52,h:59});}
+  if(e.role==='timeIcon'){Object.assign(b,{x:83,y:911,w:52,h:52});}
+  if(e.role==='locationIcon'){Object.assign(b,{x:81,y:1045,w:52,h:59});}
  }
  if(template.count===4){
   if(e.kind==='rect' && e.id===template.elements.find(t=>t.kind==='rect')?.id){Object.assign(b,{x:48,y:0,w:608,h:410});}
@@ -149,6 +141,9 @@ function colorFor(e){
  const custom=overrides[e.id]?.style?.color;
  if(custom)return custom;
  const th=chosenTheme(), role=e.role||'';
+ // Talk titles sit on the lower light panel in these three two-tone palettes.
+ // PPT slide text colors were sometimes white, rendering illegible on near-white.
+ if(/^speaker\d+\.title$/.test(role) && ['yellowwhite','graywhite','pinkwhite'].includes(th.id))return th.text;
  if(th.source){
   const ppt=DB.templates.find(t=>t.slide===th.source);
   const matched=ppt?.elements.find(x=>x.kind==='text' && x.role===role);
@@ -165,6 +160,37 @@ function colorFor(e){
 }
 function rectColor(e){const panels=template.elements.filter(x=>x.kind==='rect');return e.id===panels[0]?.id?(panelOverrides.top||chosenTheme().panelTop):(panelOverrides.bottom||chosenTheme().panelBottom)}
 function lineColor(e){return chosenTheme().text}
+// The same SVG stroke hue is used for both icons and for the time numerals.
+// Respect a user's manually selected time color when one exists.
+function iconColor(){const time=template.elements.find(e=>e.role==='time'&&e.kind==='text');return time?colorFor(time):chosenTheme().accent}
+const ICON_DRAW={
+ mapPin:'<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+ clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'
+};
+function vectorIcon(e){
+ const el=make('div','poster-element vector-icon'+(showGuides?' movable-asset':''),{...dimensions(e),color:iconColor()});
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+ svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('fill','none');
+ svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','1.7');
+ svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');
+ svg.setAttribute('width','100%');svg.setAttribute('height','100%');
+ svg.innerHTML=ICON_DRAW[e.iconType]||ICON_DRAW.mapPin;
+ el.append(svg);
+ if(showGuides){el.dataset.key=e.id;el.title='拖动图标改变位置，选中后拖动控制点等比缩放';el.addEventListener('pointerdown',ev=>startDrag(ev,e.id,false));}
+ return el;
+}
+function drawVectorIcon(ctx,e){
+ ctx.save();ctx.translate(e.x,e.y);ctx.scale(e.w/24,e.h/24);
+ ctx.strokeStyle=iconColor();ctx.lineWidth=1.7;ctx.lineCap='round';ctx.lineJoin='round';
+ if(e.iconType==='clock'){
+  ctx.beginPath();ctx.arc(12,12,10,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(12,6);ctx.lineTo(12,12);ctx.lineTo(16,14);ctx.stroke();
+ }else{
+  const p=new Path2D('M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z');ctx.stroke(p);
+  ctx.beginPath();ctx.arc(12,10,3,0,Math.PI*2);ctx.stroke();
+ }
+ ctx.restore();
+}
+
 // Some PowerPoint logo bounding boxes extend outside the slide (while their
 // artwork has transparent padding). Keep both complete logos in a safe zone.
 function imageBox(e){
@@ -184,7 +210,7 @@ function linkedPanelMembers(panel){
   if(e.id===panel.id||e.kind==='background'||e.kind==='rect'||(e.kind==='image'&&/(?:sjtu|sfl)_logo_/i.test(e.src||'')))return false;
   const role=e.role||'';
   if(one){
-   const lowerMember=['day','month','weekday','time','ampm','dateLong','venue','locationIcon'].includes(role)||/lucide_(?:clock|map_pin)_gold/.test(e.src||'');
+   const lowerMember=['day','month','weekday','time','ampm','dateLong','venue','locationIcon','timeIcon'].includes(role);
    return isUpper?!lowerMember:lowerMember;
   }
   const upperMember=role==='eventTitle'||role==='host';
@@ -212,7 +238,7 @@ function setPanelProperty(src,key,value){
 }
 function make(tag,cls,style){const el=document.createElement(tag);if(cls)el.className=cls;if(style)Object.assign(el.style,style);return el}
 function dimensions(e){return {left:e.x+'px',top:e.y+'px',width:Math.max(1,e.w)+'px',height:Math.max(1,e.h)+'px'}}
-function isEditableImage(e){return e.kind==='portrait'||e.role==='locationIcon'||e.role==='timeIcon'}
+function isEditableImage(e){return e.kind==='portrait'||e.kind==='icon'||e.role==='locationIcon'||e.role==='timeIcon'}
 function imageSelectionOverlay(e){
  const outline=make('div','poster-element asset-selection '+(e.kind==='portrait'?'portrait-selection':'icon-selection'),dimensions(e));
  outline.dataset.controlFor=e.id;
@@ -262,6 +288,8 @@ function renderPoster(){
    }
   }else if(e.kind==='line'){
    el=make('div','poster-element line',{left:e.x+'px',top:e.y+'px',width:Math.max(1,e.w)+'px',height:Math.max(1,e.h)+'px',borderLeft:e.h>=e.w?`1.5px solid ${lineColor(e)}`:'none',borderTop:e.w>e.h?`1.5px solid ${lineColor(e)}`:'none'});
+  }else if(e.kind==='icon'){
+   el=vectorIcon(e);
   }else if(e.kind==='image'){
    const b=imageBox(e);
    el=make('img', /logo_/i.test(e.src||'')?'poster-element logo':'poster-element icon-image'+(showGuides && isEditableImage(e)?' movable-asset':''),{
@@ -700,6 +728,7 @@ async function drawFallback(){const canvas=document.createElement('canvas');canv
   if(e.kind==='background'&&!bg){const img=await getImg(effectiveBackground(e.src));if(img){ctx.translate(e.x+e.w/2,e.y+e.h/2);ctx.rotate((e.rotation||0)*Math.PI/180);ctx.drawImage(img,-e.w/2,-e.h/2,e.w,e.h)}}
   if(e.kind==='rect'){ctx.globalAlpha=e.alpha;ctx.fillStyle=rectColor(e);ctx.fillRect(e.x,e.y,e.w,e.h)}
   if(e.kind==='line'){ctx.strokeStyle=lineColor(e);ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+e.w,e.y+e.h);ctx.stroke()}
+  if(e.kind==='icon'){drawVectorIcon(ctx,e)}
   if(e.kind==='image'){const b=imageBox(e);const img=await getImg(e.src);if(img){ctx.drawImage(img,b.x,b.y,b.w,b.h)}}
   if(e.kind==='portrait'){
    const num=Number(e.role?.match(/speaker(\d+)/)?.[1]||1)-1;

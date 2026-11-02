@@ -39,3 +39,9 @@
 .text-selection-overlay{pointer-events:none;z-index:15;border:2px dashed #00adcf;}
 .text-selection-grip{position:absolute;width:16px;height:16px;right:-9px;bottom:-9px;background:white;border:2px solid #00adcf;pointer-events:auto;cursor:nwse-resize;touch-action:none;box-shadow:0 1px 3px #3336;}
 #export-poster .text-selection-overlay{display:none!important;}
+
+/* v10: all location/clock icons are vector, with stroke resolved via CSS currentColor. */
+.poster-element.vector-icon{z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center;}
+.poster-element.vector-icon svg{width:100%;height:100%;display:block;overflow:visible;}
+.poster.show-guides .poster-element.vector-icon.movable-asset{pointer-events:auto;cursor:move;touch-action:none;}
+.poster.show-guides .poster-element.vector-icon.movable-asset:hover{outline:2px dashed #00add2;outline-offset:2px;}

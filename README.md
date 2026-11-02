@@ -1,4 +1,4 @@
-# Research Forum Poster Studio v9
+# Research Forum Poster Studio v10
 
 ## 使用
 
@@ -19,3 +19,9 @@
 将本目录里的 `index.html`、`app.js`、`styles.css`、`templates.js`、`asset-data.js`、`favicon.svg`、`.nojekyll` 和 `assets/` 一并上传到仓库根目录。GitHub > Settings > Pages > Deploy from a branch > main > /(root)。
 
 注意：Google Sans 在线加载可能受网络环境影响；网页会以系统字体回退。为兼容直接双击打开文件，默认图片也以 Data URI 方式内嵌到 asset-data.js；请勿将其删除。
+
+## v10
+- 2、3 人版 Location 图标向地点文字对齐，保留左侧安全内边距。
+- 时钟和定位图标改用内嵌 Lucide 风格 SVG，颜色随时间字号颜色或当前主题的强调色变化。
+- 黄白、灰白、粉白三套浅色方案的演讲题目改用深色，改善对比度。
+- 不再存放多份静态图标 PNG，预览和 JPG 的兼容导出都用矢量路径绘制。
