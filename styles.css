@@ -64,3 +64,5 @@
 .section .color-control input[type=color].color-chip{width:42px;min-width:42px;height:40px;padding:3px;border-radius:7px;cursor:pointer;flex:0 0 auto;}
 .color-control .color-hex[aria-invalid=true]{border-color:#c64c4c;background:#fff6f6;}
 @media(max-width:1060px){.preview-toolbar{padding-inline:16px}.preview-actions{gap:7px}.preview-actions .btn{padding-inline:8px}}
+/* v13: explicit overflow warning for editable text boxes. */
+.poster.show-guides .poster-element.text-el.overflowed::after{content:'内容超出文本框';position:absolute;left:0;top:100%;margin-top:4px;background:#f08057;color:#fff;font:11px/1.2 Arial,sans-serif;padding:3px 6px;border-radius:4px;white-space:nowrap;z-index:20;pointer-events:none}

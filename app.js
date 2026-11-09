@@ -47,7 +47,7 @@ const exportFilename=()=>{const header=template.count===1?(fields.speakers?.[0]?
 const TOP_PANEL_SHIFT=18;
 const topInfoRoles=new Set(['day','month','weekday','time','ampm','dateLong','venue']);
 let template=DB.templates[0], selectedId=null, previewScale=0.55, fields={}, overrides={}, themeId='red', photoZoom=[1,1,1,1],photoY=[50,50,50,50],photoX=[50,50,50,50], backgrounds={}, photos=[], showGuides=true;
-let panelOverrides={};let lastUnmatched=[];let dragState=null;let monoBackground=true,bgFocusX=50,bgFocusY=50;
+let panelOverrides={};let overridesByTemplate={};let lastUnmatched=[];let dragState=null;let monoBackground=true,bgFocusX=50,bgFocusY=50;
 let linkEdits=false;const undoStack=[];const UNDO_LIMIT=40;
 const EXPORT_SCALE=4;
 const bgLightGray=src=>src?.replace(/(background_\d+)\.jpg$/,'$1_lightgray.jpg');
@@ -81,8 +81,8 @@ function setElementProperty(src,key,value){const before=undoState();overrides[sr
  if(['x','w','h'].includes(key))syncPeers(src,{[key]:value});recordUndo(before);renderPoster();renderElementEditor();persist();}
 function setElementStyle(src,key,value){const before=undoState();overrides[src.id]||={};overrides[src.id].style||={};overrides[src.id].style[key]=value;syncPeers(src,{style:{[key]:value}});recordUndo(before);renderPoster();persist();}
 function notify(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(notify.t);notify.t=setTimeout(()=>el.classList.remove('show'),3300)}
-function persist(){try{const p={templateId:template.slide,fields,overrides,panelOverrides,themeId,photoZoom,photoY,photoX,photos,backgrounds,monoBackground,bgFocusX,bgFocusY,linkEdits};const str=JSON.stringify(p);if(str.length<3.5e6)localStorage.setItem(KEY,str);$('save-indicator').textContent='已在浏览器中保存';}catch(err){$('save-indicator').textContent='建议下载配置文件';}}
-function loadSaved(){try{const raw=localStorage.getItem(KEY)||localStorage.getItem(V11_KEY)||localStorage.getItem(V10_KEY)||localStorage.getItem(V9_KEY)||localStorage.getItem(V7_KEY)||localStorage.getItem(V6_KEY)||localStorage.getItem(V5_KEY)||localStorage.getItem(PREV_KEY)||localStorage.getItem(OLDER_KEY);if(!raw)return;const v=JSON.parse(raw);if(!v.fields||!v.templateId)return;template=baseTemplate((DB.templates.find(t=>t.slide===v.templateId)||template).count);fields=v.fields;fields.speakers=[...(fields.speakers||[])];while(fields.speakers.length<4)fields.speakers.push({title:'',name:'',bio:''});overrides=(localStorage.getItem(KEY)||localStorage.getItem(V11_KEY)||localStorage.getItem(V10_KEY))?(v.overrides||{}):{};panelOverrides=v.panelOverrides||{};themeId=THEMES.some(t=>t.id===v.themeId)?v.themeId:({gold:'yellowwhite',slate:'graywhite',coral:'pinkwhite'}[v.themeId]||'red');photoZoom=v.photoZoom||[1,1,1,1];photoY=v.photoY||[50,50,50,50];photoX=v.photoX||[50,50,50,50];photos=(localStorage.getItem(KEY)||localStorage.getItem(V11_KEY)||localStorage.getItem(V10_KEY))?(v.photos||photos):Array(4).fill('assets/default_scholar.png');backgrounds=v.backgrounds||{};monoBackground=v.monoBackground!==false;bgFocusX=v.bgFocusX??50;bgFocusY=v.bgFocusY??50;linkEdits=!!v.linkEdits;template=baseTemplate(template.count); }catch(e){console.warn('Cannot load saved project',e)}}
+function persist(){try{overridesByTemplate[template.count]=overrides;const p={templateId:template.slide,fields,overrides,overridesByTemplate,panelOverrides,themeId,photoZoom,photoY,photoX,photos,backgrounds,monoBackground,bgFocusX,bgFocusY,linkEdits};const str=JSON.stringify(p);if(str.length<3.5e6){localStorage.setItem(KEY,str);$('save-indicator').textContent='已在浏览器中保存';}else{$('save-indicator').textContent='配置过大，请导出配置文件';notify('配置超过浏览器自动保存限制，请导出配置文件');}}catch(err){$('save-indicator').textContent='建议导出配置文件';notify('浏览器自动保存失败，请导出配置文件');}}
+function loadSaved(){try{const raw=localStorage.getItem(KEY)||localStorage.getItem(V11_KEY)||localStorage.getItem(V10_KEY)||localStorage.getItem(V9_KEY)||localStorage.getItem(V7_KEY)||localStorage.getItem(V6_KEY)||localStorage.getItem(V5_KEY)||localStorage.getItem(PREV_KEY)||localStorage.getItem(OLDER_KEY);if(!raw)return;const v=JSON.parse(raw);if(!v.fields||!v.templateId)return;template=baseTemplate((DB.templates.find(t=>t.slide===v.templateId)||template).count);fields=v.fields;fields.speakers=[...(fields.speakers||[])];while(fields.speakers.length<4)fields.speakers.push({title:'',name:'',bio:''});overridesByTemplate=v.overridesByTemplate||{};overrides=(localStorage.getItem(KEY)||localStorage.getItem(V11_KEY)||localStorage.getItem(V10_KEY))?(overridesByTemplate[template.count]||v.overrides||{}):{};panelOverrides=v.panelOverrides||{};themeId=THEMES.some(t=>t.id===v.themeId)?v.themeId:({gold:'yellowwhite',slate:'graywhite',coral:'pinkwhite'}[v.themeId]||'red');photoZoom=v.photoZoom||[1,1,1,1];photoY=v.photoY||[50,50,50,50];photoX=v.photoX||[50,50,50,50];photos=(localStorage.getItem(KEY)||localStorage.getItem(V11_KEY)||localStorage.getItem(V10_KEY))?(v.photos||photos):Array(4).fill('assets/default_scholar.png');backgrounds=v.backgrounds||{};monoBackground=v.monoBackground!==false;bgFocusX=v.bgFocusX??50;bgFocusY=v.bgFocusY??50;linkEdits=!!v.linkEdits;template=baseTemplate(template.count); }catch(e){console.warn('Cannot load saved project',e)}}
 function getRole(role){if(!role)return null;const m=role.match(/^speaker(\d+)\.(title|name|bio)$/);if(m)return fields.speakers[Number(m[1])-1]?.[m[2]]??'';return fields[role]??null}
 function setRole(role,val){if(!role)return;const m=role.match(/^speaker(\d+)\.(title|name|bio)$/);if(m){fields.speakers[Number(m[1])-1][m[2]]=val}else fields[role]=val;}
 // Preserve the staggered pair of PPT rectangles.  Previous versions
@@ -399,29 +399,10 @@ function renderPoster(){
  updateOverflows();
 }
 function updateOverflows(){requestAnimationFrame(()=>{document.querySelectorAll('#poster .text-el').forEach(el=>{
- // Small layouts must adapt to real text, instead of inheriting an oversized
- // font from the PPT placeholder. A manually-set font size always wins.
- const source=template.elements.find(item=>item.id===el.dataset.source),role=source?.role||'';
- const userSize=overrides[el.dataset.source]?.style?.size;
- let minimum=null;
- if(!userSize && !el.isContentEditable){
-  if(template.count===4){
-   if(/^speaker\d+\.title$/.test(role))minimum=17;
-   else if(/^speaker\d+\.bio$/.test(role))minimum=13;
-   else if(role==='venue')minimum=16;
-   else if(role==='eventTitle')minimum=29;
-  }else if(template.count===1){
-   if(role==='eventTitle')minimum=31;
-   else if(role==='speaker1.bio')minimum=17;
-  }
- }
- if(minimum!=null && el.scrollHeight>el.offsetHeight+4){
-  let fs=parseFloat(el.style.fontSize);
-  while(fs>minimum && el.scrollHeight>el.offsetHeight+4){fs=Math.max(minimum,fs-0.5);el.style.fontSize=fs+'px';}
- }
- const tooHigh=el.scrollHeight>el.offsetHeight+7;
- el.classList.toggle('overflowed',tooHigh && showGuides && selectedId===el.dataset.source);
- });});}
+  const tooHigh=el.scrollHeight>el.clientHeight+7;
+  el.classList.toggle('overflowed',tooHigh && showGuides);
+  el.title=tooHigh?'内容超出文本框，请调整文本框高度、字号或手动换行':'点击选中，拖动定位；双击编辑文字';
+  });});}
 function updateScale(){const st=$('preview-stage');if(!st||!st.clientWidth)return;const pad=window.innerWidth>750?80:24;const width=Math.max(200,st.clientWidth-pad),height=window.innerWidth>750?window.innerHeight-230:650;previewScale=Math.min(width/W,height/H,.83);$('poster-holder').style.width=(W*previewScale)+'px';$('poster-holder').style.height=(H*previewScale)+'px';$('poster').style.transform=`scale(${previewScale})`;}
 function setSelection(id){selectedId=id;renderPoster();renderElementEditor()}
 function startDrag(event,id,resize){if(event.button!==0||!showGuides||event.target.closest('[contenteditable="true"]'))return;
@@ -486,7 +467,7 @@ function clearAllText(){
 function clearEdits(){const before=undoState();template.elements.forEach(e=>delete overrides[e.id]);selectedId=null;recordUndo(before);renderPoster();renderElementEditor();persist();notify('当前版式的位置与字号已恢复为 PPT 默认值')}
 function switchCount(count){
  const next=baseTemplate(Number(count));if(!next)return;
- template=next;selectedId=null;overrides={};
+ overridesByTemplate[template.count]=overrides;template=next;selectedId=null;overrides=overridesByTemplate[template.count]||{};
  renderControls();renderPoster();renderFieldEditor();renderImages();renderElementEditor();updateScale();persist();
 }
 function renderControls(){
@@ -517,7 +498,7 @@ function renderImages(){const root=$('image-controls');root.replaceChildren();
  const x=make('input');x.type='range';x.min=0;x.max=100;x.step=1;x.value=photoX[n]??50;x.title='头像裁切水平位置';x.addEventListener('input',()=>{photoX[n]=Number(x.value);renderPoster();persist()});const zl=make('label');zl.textContent='缩放';const xl=make('label');xl.textContent='左右位置';const yl=make('label');yl.textContent='上下位置';ct.append(label,zl,z,xl,x,yl,y);wrap.append(img,ct,open);root.append(wrap);
  }}
 function selectPortrait(index){const f=document.createElement('input');f.type='file';f.accept='image/*';f.onchange=()=>{const file=f.files?.[0];if(!file)return;readImage(file,src=>{photos[index]=src;photoZoom[index]=1;photoY[index]=50;photoX[index]=50;renderImages();renderPoster();persist();notify('头像已替换')})};f.click()}
-function readImage(file,callback){if(!file.type.startsWith('image/'))return notify('请选择图片文件');if(file.size>10e6)notify('大图片可能导致配置无法自动保存，建议压缩后上传');const r=new FileReader();r.onload=()=>callback(r.result);r.readAsDataURL(file)}
+function readImage(file,callback){if(!file.type.startsWith('image/'))return notify('请选择图片文件');const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const max=2400,scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);callback(canvas.toDataURL('image/jpeg',.9));};img.onerror=()=>notify('无法读取图片');img.src=r.result;};r.readAsDataURL(file)}
 async function preprocessPhoto(src){
  const img=await new Promise((resolve,reject)=>{const it=new Image();it.onload=()=>resolve(it);it.onerror=reject;it.src=src});
  const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
@@ -724,8 +705,8 @@ function analyze(raw){
 }
 function applyParse(){const raw=$('raw-paste').value.trim();if(!raw)return notify('请先粘贴活动资料');const r=analyze(raw);const upd=r.updated;const newN=upd.speakers?.length||0;
  for(const [key,value] of Object.entries(upd)){if(key==='speakers'){fields.speakers=Array.from({length:4},(_,i)=>i<value.length?{title:value[i].title||'',name:value[i].name||'',bio:value[i].bio||''}:{title:'',name:'',bio:''})}else if(value)fields[key]=value}
- if(newN>0&&newN<=4&&newN!==template.count){const t=DB.templates.find(t=>t.count===newN);if(t)template=t}
- const n=r.found;lastUnmatched=r.rest;const report=$('parse-report');report.hidden=false;report.textContent=`已识别 ${n} 处信息${newN?'，检测到 '+newN+' 位主讲人':''}。请检查下方字段并修正；原文未被删除。`;
+  if(newN>0&&newN<=4&&newN!==template.count){const t=DB.templates.find(t=>t.count===newN);if(t){overridesByTemplate[template.count]=overrides;template=t;overrides=overridesByTemplate[template.count]||{}}}
+  const n=r.found;lastUnmatched=r.rest;const report=$('parse-report');report.hidden=false;report.textContent=newN?`已识别 ${n} 处信息，检测到 ${newN} 位主讲人。请检查下方字段并修正；原文未被删除。`:`未检测到明确的 Speaker 信息，仅将内容作为候选活动标题。请在下方手动确认字段。`;
  $('unmatched-box').hidden=!r.rest.length;$('unmatched-text').textContent=r.rest.join('\n');
  selectedId=null;renderControls();renderFieldEditor();renderPoster();renderImages();renderElementEditor();updateScale();persist();notify('识别完成，请在“内容校对”中检查结果')
 }
@@ -822,12 +803,12 @@ async function drawFallback(){const canvas=document.createElement('canvas');canv
  }
  return canvas;
 }
-function saveProject(){const json=JSON.stringify({version:1,templateId:template.slide,fields,overrides,panelOverrides,themeId,photoZoom,photoY,photoX,photos,backgrounds,monoBackground,bgFocusX,bgFocusY},null,2);downloadBlob(new Blob([json],{type:'application/json'}),'Research_Forum_project.json');notify('配置文件已保存')}
+function saveProject(){overridesByTemplate[template.count]=overrides;const json=JSON.stringify({version:2,templateId:template.slide,fields,overrides,overridesByTemplate,panelOverrides,themeId,photoZoom,photoY,photoX,photos,backgrounds,monoBackground,bgFocusX,bgFocusY,linkEdits},null,2);downloadBlob(new Blob([json],{type:'application/json'}),'Research_Forum_project.json');notify('配置文件已保存')}
 function importProject(file){const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);if(!data.fields?.speakers||!data.templateId)throw Error('不是有效的海报配置文件');template=DB.templates.find(t=>t.slide===data.templateId)||DB.templates[0];fields=data.fields;while(fields.speakers.length<4)fields.speakers.push({title:'',name:'',bio:''});overrides=data.overrides||{};themeId=THEMES.some(t=>t.id===data.themeId)?data.themeId:'red';photoZoom=data.photoZoom||[1,1,1,1];photoY=data.photoY||[50,50,50,50];photoX=data.photoX||[50,50,50,50];photos=data.photos||[];backgrounds=data.backgrounds||{};monoBackground=data.monoBackground!==false;bgFocusX=data.bgFocusX??50;bgFocusY=data.bgFocusY??50;selectedId=null;refresh();persist();notify('已导入配置')}catch(e){notify('无法读取配置：'+e.message)}};r.readAsText(file)}
 function refresh(){renderControls();renderFieldEditor();renderImages();renderPoster();renderElementEditor();updateScale()}
 function bind(){
  $('parse-btn').onclick=applyParse;$('sample-btn').onclick=example;$('reset-layout').onclick=clearEdits;
- $('export-jpg').onclick=exportJpg;$('clear-text').onclick=clearAllText;
+  $('export-jpg').onclick=exportJpg;$('save-project').onclick=saveProject;$('clear-text').onclick=clearAllText;
  $('undo-canvas').onclick=undoCanvas;updateUndoButton();$('link-elements').checked=linkEdits;
  $('link-elements').onchange=e=>{linkEdits=e.target.checked;notify(linkEdits?'已开启同级联动（不改变各人纵向排布）':'已关闭同级联动');};
  document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||e.key.toLowerCase()!=='z'||e.altKey||e.shiftKey)return;
